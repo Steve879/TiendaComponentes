@@ -1,0 +1,40 @@
+from fastapi import APIRouter, Request
+from models.component_model import Components
+from utils.security import validateadmin
+from controllers.component_controller import (
+    create_component,
+    get_component_by_id,
+    get_all_components,
+    update_component,
+    delete_component
+)
+
+router = APIRouter(prefix="/components", tags=["Components"])
+
+
+@router.post("/", response_model=Components)
+@validateadmin
+async def create_component_endpoint(request: Request, component: Components):
+    return await create_component(component)
+
+
+@router.get("/{component_id}", response_model=Components)
+async def get_component_by_id_endpoint(component_id: str):
+    return await get_component_by_id(component_id)
+
+
+@router.get("/", response_model=list[Components])
+async def list_all_components_endpoint():
+    return await get_all_components()
+
+
+@router.put("/{component_id}", response_model=Components)
+@validateadmin
+async def update_component_endpoint(request: Request, component_id: str, updated_data: Components):
+    return await update_component(component_id, updated_data)
+
+
+@router.delete("/{component_id}")
+@validateadmin
+async def delete_component_endpoint(request: Request, component_id: str):
+    return await delete_component(component_id)
