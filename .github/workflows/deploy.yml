@@ -35,18 +35,18 @@ jobs:
         - name: Test FastAPI imports
           env:
             MONGODB_URI: ${{ secrets.MONGODB_URI }}
-            MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+            MONGO_DB_NAME: ${{ secrets.DATABASE_NAME }}
             SECRET_KEY: ${{ secrets.SECRET_KEY }}
             FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
             FIREBASE_CREDENTIALS_BASE64: ${{ secrets.FIREBASE_CREDENTIALS_BASE64 }}
-            RAILWAY_TOKEN: ${{ secrets.RAILWAIL_TOKEN }}
+            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           run: |
             python -c "from main import app; print('FASTAPI app imported successfully')"
 
         - name: Run tests
           env:
             MONGODB_URI: ${{ secrets.MONGODB_URI }}
-            MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+            MONGO_DB_NAME: ${{ secrets.DATABASE_NAME }}
             SECRET_KEY: ${{ secrets.SECRET_KEY }}
             FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
             FIREBASE_CREDENTIALS_BASE64: ${{ secrets.FIREBASE_CREDENTIALS_BASE64 }}
@@ -85,12 +85,12 @@ jobs:
             RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           run: |
             echo "starting deployment..."
-            railway up --service "dulceria-api" || \
-            railway up --service dulceria-api || \
+            railway up --service "Tienda_de_Componentes-api" || \
+            railway up --service Tienda_de_Componentes-api || \
             railway up --service web || \
             railway up --service api || \
             railway up --service app || \
-            railway up --service dulceria-api || \
-            railway up --service dulceria || \
+            railway up --service Tienda_de_Componentes-api || \
+            railway up --service Tienda_de_Componentes || \
             railway up --service backend || \
             (echo "creating new service and deploying" && railway up)
