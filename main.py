@@ -1,25 +1,26 @@
+import os
 import uvicorn
 import logging
 from fastapi import FastAPI, Request
-from routes.component_pipeline_routes import router as component_pipeline_router
 
+from routes.component_pipeline_routes import router as component_pipeline_router
+from routes.inventory_route import router as inventory_router
+from routes.component_route import router as component_router
 
 
 from controllers.users import create_user, login
 from models.users import User
 from models.login import Login
 
-
 from utils.security import validateuser, validateadmin
 
 
-from routes.inventory_route import router as inventory_router  
-from routes.component_route import router as component_router
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 app = FastAPI()
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 @app.get("/")
 def read_root():
@@ -29,8 +30,8 @@ def read_root():
 def health_check():
     try:
         return {
-            "status": "healthy", 
-            "timestamp": "2025-08-02", 
+            "status": "healthy",
+            "timestamp": "2025-08-02",
             "service": "mi_api",
             "environment": "production"
         }
@@ -81,5 +82,7 @@ app.include_router(inventory_router)
 app.include_router(component_router)
 app.include_router(component_pipeline_router)
 
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    port = int(os.environ.get("PORT", 8000))  
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
