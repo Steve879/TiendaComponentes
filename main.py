@@ -76,7 +76,6 @@ async def example_user(request: Request):
         "email": request.state.email
     }
 
-
 app.include_router(inventory_router)
 app.include_router(component_router)
 app.include_router(component_pipeline_router)
