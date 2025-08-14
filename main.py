@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-
 @app.get("/")
 def read_root():
     return {"status": "healthy", "version": "0.0.0", "service": "Tienda_de_Componentes-api"}
