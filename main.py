@@ -19,19 +19,16 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# =========================
-# Configuración de CORS
-# =========================
+# Add CORS.
+from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Desarrollo local
-        "https://tiendacomponentes-ui.vercel.app",  # Producción (ajústalo a tu dominio real)
-    ],
+    allow_origins=["*"],  # Allow all origins for development; restrict in production
     allow_credentials=True,
-    allow_methods=["*"],  # Permitir todos los métodos
-    allow_headers=["*"],  # Permitir todos los headers
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
+
 
 @app.get("/")
 def read_root():
