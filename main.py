@@ -24,7 +24,7 @@ app = FastAPI()
 
 @app.get("/")
 def read_root():
-    return {"status": "healthy", "version": "0.0.0", "service": "mi_api"}
+    return {"status": "healthy", "version": "0.0.0", "service": "Tienda_de_Componentes-api"}
 
 @app.get("/health")
 def health_check():
