@@ -2,11 +2,11 @@ import os
 import uvicorn
 import logging
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from routes.component_pipeline_routes import router as component_pipeline_router
 from routes.inventory_route import router as inventory_router
 from routes.component_route import router as component_router
-
 
 from controllers.users import create_user, login
 from models.users import User
@@ -14,12 +14,24 @@ from models.login import Login
 
 from utils.security import validateuser, validateadmin
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 app = FastAPI()
+
+# =========================
+# Configuración de CORS
+# =========================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",  # Desarrollo local
+        "https://tiendacomponentes-ui.vercel.app",  # Producción (ajústalo a tu dominio real)
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # Permitir todos los métodos
+    allow_headers=["*"],  # Permitir todos los headers
+)
 
 @app.get("/")
 def read_root():
@@ -50,7 +62,6 @@ def readiness_check():
     except Exception as e:
         return {"status": "not_ready", "error": str(e)}
 
-
 @app.post("/users")
 async def create_user_endpoint(user: User) -> User:
     return await create_user(user)
@@ -58,7 +69,6 @@ async def create_user_endpoint(user: User) -> User:
 @app.post("/login")
 async def login_access(l: Login) -> dict:
     return await login(l)
-
 
 @app.get("/exampleadmin")
 @validateadmin
@@ -76,12 +86,11 @@ async def example_user(request: Request):
         "email": request.state.email
     }
 
+# Rutas incluidas
 app.include_router(inventory_router)
 app.include_router(component_router)
 app.include_router(component_pipeline_router)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))  
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
-
-#.
