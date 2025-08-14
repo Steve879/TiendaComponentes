@@ -9,32 +9,32 @@ from controllers.component_controller import (
     delete_component
 )
 
-router = APIRouter(prefix="/components", tags=["Components"])
+router = APIRouter(tags=["Components"])
 
 
-@router.post("/", response_model=Components)
+@router.post("/components", response_model=Components)
 @validateadmin
 async def create_component_endpoint(request: Request, component: Components):
     return await create_component(component)
 
 
-@router.get("/{component_id}", response_model=Components)
+@router.get("/components/{component_id}", response_model=Components)
 async def get_component_by_id_endpoint(component_id: str):
     return await get_component_by_id(component_id)
 
 
-@router.get("/", response_model=list[Components])
+@router.get("/components", response_model=list[Components])
 async def list_all_components_endpoint():
     return await get_all_components()
 
 
-@router.put("/{component_id}", response_model=Components)
+@router.put("/components/{component_id}", response_model=Components)
 @validateadmin
 async def update_component_endpoint(request: Request, component_id: str, updated_data: Components):
     return await update_component(component_id, updated_data)
 
 
-@router.delete("/{component_id}")
+@router.delete("/components/{component_id}")
 @validateadmin
 async def delete_component_endpoint(request: Request, component_id: str):
     return await delete_component(component_id)
