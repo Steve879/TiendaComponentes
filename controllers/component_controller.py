@@ -1,74 +1,101 @@
+import os
+import uvicorn
 import logging
-from fastapi import HTTPException
-from bson import ObjectId
-from models.component_model import Components
-from utils.mongodb import get_collection
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from routes.component_pipeline_routes import router as component_pipeline_router
+from routes.inventory_route import router as inventory_router
+from routes.component_route import router as component_router
+
+from controllers.users import create_user, login
+from models.users import User
+from models.login import Login
+from utils.security import validateuser, validateadmin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-collection_name = "components"
+app = FastAPI()
+
+# --- CORS Middleware ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite todos los orígenes para desarrollo; restringe en producción
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos los métodos
+    allow_headers=["*"],  # Permite todos los headers
+)
+
+# --- Preflight global para OPTIONS ---
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str):
+    return JSONResponse(content={}, status_code=200)
 
 
-async def create_component(component: Components) -> Components:
+# --- Rutas de prueba y salud ---
+@app.get("/")
+def read_root():
+    return {"status": "healthy", "version": "0.0.0", "service": "Tienda_de_Componentes-api"}
+
+@app.get("/health")
+def health_check():
     try:
-        coll = get_collection(collection_name)
-        component_dict = component.model_dump(exclude={"id"})
-        result = coll.insert_one(component_dict)
-        component.id = str(result.inserted_id)
-        return component
+        return {
+            "status": "healthy",
+            "timestamp": "2025-08-02",
+            "service": "mi_api",
+            "environment": "production"
+        }
     except Exception as e:
-        logger.error(f"Error creating component: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        return {"status": "unhealthy", "error": str(e)}
 
-
-async def get_component_by_id(component_id: str) -> Components:
+@app.get("/ready")
+def readiness_check():
     try:
-        coll = get_collection(collection_name)
-        item = coll.find_one({"_id": ObjectId(component_id)})
-        if not item:
-            raise HTTPException(status_code=404, detail="Component not found")
-        item["id"] = str(item["_id"])
-        return Components(**item)
+        from utils.mongodb import test_connection
+        db_status = test_connection()
+        return {
+            "status": "ready" if db_status else "not_ready",
+            "database": "connected" if db_status else "disconnected",
+            "service": "mi_api"
+        }
     except Exception as e:
-        logger.error(f"Error fetching component: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        return {"status": "not_ready", "error": str(e)}
 
 
-async def get_all_components() -> list[Components]:
-    try:
-        coll = get_collection(collection_name)
-        items = []
-        for doc in coll.find():
-            doc["id"] = str(doc["_id"])
-            items.append(Components(**doc))
-        return items
-    except Exception as e:
-        logger.error(f"Error retrieving components list: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+# --- Rutas de usuarios ---
+@app.post("/users")
+async def create_user_endpoint(user: User) -> User:
+    return await create_user(user)
+
+@app.post("/login")
+async def login_access(l: Login) -> dict:
+    return await login(l)
+
+@app.get("/exampleadmin")
+@validateadmin
+async def example_admin(request: Request):
+    return {
+        "message": "This is an example admin endpoint.",
+        "admin": request.state.admin
+    }
+
+@app.get("/exampleuser")
+@validateuser
+async def example_user(request: Request):
+    return {
+        "message": "This is an example user endpoint.",
+        "email": request.state.email
+    }
+
+# --- Incluyendo routers ---
+app.include_router(inventory_router)
+app.include_router(component_router)
+app.include_router(component_pipeline_router)
 
 
-async def update_component(component_id: str, updated_data: Components) -> Components:
-    try:
-        coll = get_collection(collection_name)
-        update_dict = updated_data.model_dump(exclude={"id"})
-        result = coll.update_one({"_id": ObjectId(component_id)}, {"$set": update_dict})
-        if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Component not found")
-        updated_data.id = component_id
-        return updated_data
-    except Exception as e:
-        logger.error(f"Error updating component: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-
-
-async def delete_component(component_id: str) -> dict:
-    try:
-        coll = get_collection(collection_name)
-        result = coll.delete_one({"_id": ObjectId(component_id)})
-        if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Component not found")
-        return {"message": "Component deleted successfully"}
-    except Exception as e:
-        logger.error(f"Error deleting component: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
