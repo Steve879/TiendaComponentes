@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from models.component_model import Components
 from utils.security import validateuser
 from controllers.component_controller import (
