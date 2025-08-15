@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from models.inventory_model import Inventory
-from utils.security import validateadmin
+from utils.security import validateuser
 from controllers.inventory_controller import (
     create_inventory,
     get_inventory_by_id,
@@ -13,7 +13,7 @@ router = APIRouter(tags=["Inventory"])
 
 
 @router.post("/inventory", response_model=Inventory)
-@validateadmin
+@validateuser
 async def create_inventory_item(request: Request, inventory: Inventory):
     return await create_inventory(inventory)
 
@@ -29,12 +29,12 @@ async def list_inventory_items():
 
 
 @router.put("/inventory/{inventory_id}", response_model=Inventory)
-@validateadmin
+@validateuser
 async def update_inventory_item(request: Request, inventory_id: str, updated_data: Inventory):
     return await update_inventory(inventory_id, updated_data)
 
 
 @router.delete("/inventory/{inventory_id}")
-@validateadmin
+@validateuser
 async def delete_inventory_item(request: Request, inventory_id: str):
     return await delete_inventory(inventory_id)

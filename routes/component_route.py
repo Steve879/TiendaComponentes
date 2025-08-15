@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 from models.component_model import Components
-from utils.security import validateadmin
+from utils.security import validateuser
 from controllers.component_controller import (
     create_component,
     get_component_by_id,
@@ -13,7 +13,7 @@ router = APIRouter(tags=["Components"])
 
 
 @router.post("/components", response_model=Components)
-@validateadmin
+@validateuser
 async def create_component_endpoint(request: Request, component: Components):
     return await create_component(component)
 
@@ -29,12 +29,12 @@ async def list_all_components_endpoint():
 
 
 @router.put("/components/{component_id}", response_model=Components)
-@validateadmin
+@validateuser
 async def update_component_endpoint(request: Request, component_id: str, updated_data: Components):
     return await update_component(component_id, updated_data)
 
 
 @router.delete("/components/{component_id}")
-@validateadmin
+@validateuser
 async def delete_component_endpoint(request: Request, component_id: str):
     return await delete_component(component_id)
