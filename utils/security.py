@@ -1,14 +1,13 @@
 import os
 import jwt
 from datetime import datetime, timedelta
-from fastapi import HTTPException, Request, Depends
+from fastapi import HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jwt import PyJWTError
 from functools import wraps
+from jwt import PyJWTError
 from dotenv import load_dotenv
 
 load_dotenv()
-
 SECRET_KEY = os.getenv("SECRET_KEY")
 security = HTTPBearer()
 
@@ -33,11 +32,11 @@ def create_jwt_token(firstname: str, lastname: str, email: str, active: bool, ad
 def validateuser(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        request: Request = kwargs.get('request')
+        request: Request = kwargs.get("request")
         if not request:
             raise HTTPException(status_code=400, detail="Request object not found")
 
-        # **Permitir preflight OPTIONS sin token**
+        # Permitir preflight OPTIONS sin JWT
         if request.method == "OPTIONS":
             return await func(*args, **kwargs)
 
@@ -60,10 +59,8 @@ def validateuser(func):
 
             if email is None:
                 raise HTTPException(status_code=401, detail="Token Invalid")
-
             if datetime.utcfromtimestamp(exp) < datetime.utcnow():
                 raise HTTPException(status_code=401, detail="Expired token")
-
             if not active:
                 raise HTTPException(status_code=401, detail="Inactive user")
 
@@ -81,11 +78,11 @@ def validateuser(func):
 def validateadmin(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        request: Request = kwargs.get('request')
+        request: Request = kwargs.get("request")
         if not request:
             raise HTTPException(status_code=400, detail="Request object not found")
 
-        # **Permitir preflight OPTIONS sin token**
+        # Permitir preflight OPTIONS sin JWT
         if request.method == "OPTIONS":
             return await func(*args, **kwargs)
 
@@ -103,16 +100,14 @@ def validateadmin(func):
             firstname = payload.get("firstname")
             lastname = payload.get("lastname")
             active = payload.get("active")
-            admin = payload.get("admin")
+            admin = payload.get("admin", False)
             exp = payload.get("exp")
             id = payload.get("id")
 
             if email is None:
                 raise HTTPException(status_code=401, detail="Token Invalid")
-
             if datetime.utcfromtimestamp(exp) < datetime.utcnow():
                 raise HTTPException(status_code=401, detail="Expired token")
-
             if not active or not admin:
                 raise HTTPException(status_code=401, detail="Inactive user or not admin")
 
@@ -128,63 +123,3 @@ def validateadmin(func):
         return await func(*args, **kwargs)
     return wrapper
 
-# Funciones auxiliares para Depends()
-def validate_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        email = payload.get("email")
-        firstname = payload.get("firstname")
-        lastname = payload.get("lastname")
-        active = payload.get("active")
-        admin = payload.get("admin", False)
-        exp = payload.get("exp")
-        user_id = payload.get("id")
-
-        if email is None:
-            raise HTTPException(status_code=401, detail="Token Invalid")
-        if datetime.utcfromtimestamp(exp) < datetime.utcnow():
-            raise HTTPException(status_code=401, detail="Expired token")
-        if not active:
-            raise HTTPException(status_code=401, detail="Inactive user")
-
-        return {
-            "id": user_id,
-            "email": email,
-            "firstname": firstname,
-            "lastname": lastname,
-            "active": active,
-            "role": "admin" if admin else "user"
-        }
-    except PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token or expired token")
-
-def validate_admin(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        email = payload.get("email")
-        firstname = payload.get("firstname")
-        lastname = payload.get("lastname")
-        active = payload.get("active")
-        admin = payload.get("admin", False)
-        exp = payload.get("exp")
-        user_id = payload.get("id")
-
-        if email is None:
-            raise HTTPException(status_code=401, detail="Token Invalid")
-        if datetime.utcfromtimestamp(exp) < datetime.utcnow():
-            raise HTTPException(status_code=401, detail="Expired token")
-        if not active or not admin:
-            raise HTTPException(status_code=401, detail="Inactive user or not admin")
-
-        return {
-            "id": user_id,
-            "email": email,
-            "firstname": firstname,
-            "lastname": lastname,
-            "active": active,
-            "role": "admin"
-        }
-    except PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token or expired token")
