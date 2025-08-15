@@ -11,22 +11,18 @@ from controllers.component_controller import (
 
 router = APIRouter(tags=["Components"])
 
-
 @router.post("/components", response_model=Components)
 @validateuser
 async def create_component_endpoint(request: Request, component: Components):
     return await create_component(component)
 
-
 @router.get("/components/{component_id}", response_model=Components)
 async def get_component_by_id_endpoint(component_id: str):
     return await get_component_by_id(component_id)
 
-
 @router.get("/components", response_model=list[Components])
 async def list_all_components_endpoint():
     return await get_all_components()
-
 
 @router.put("/components/{component_id}", response_model=Components)
 @validateuser
