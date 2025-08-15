@@ -1,21 +1,16 @@
 import os
-import secrets
-import hashlib
-import base64
 import jwt
-
 from datetime import datetime, timedelta
-from fastapi import HTTPException, Depends, Request
+from fastapi import HTTPException, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from dotenv import load_dotenv
 from jwt import PyJWTError
 from functools import wraps
+from dotenv import load_dotenv
 
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 security = HTTPBearer()
-
 
 def create_jwt_token(firstname: str, lastname: str, email: str, active: bool, admin: bool, id: str):
     expiration = datetime.utcnow() + timedelta(hours=1)
@@ -35,18 +30,16 @@ def create_jwt_token(firstname: str, lastname: str, email: str, active: bool, ad
     )
     return token
 
-
 def validateuser(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        request = kwargs.get('request')
+        request: Request = kwargs.get('request')
         if not request:
             raise HTTPException(status_code=400, detail="Request object not found")
 
-        # ✅ Permitir preflight OPTIONS
+        # **Permitir preflight OPTIONS sin token**
         if request.method == "OPTIONS":
-            from fastapi.responses import Response
-            return Response(status_code=200)
+            return await func(*args, **kwargs)
 
         authorization: str = request.headers.get("Authorization")
         if not authorization:
@@ -58,7 +51,6 @@ def validateuser(func):
 
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-
             email = payload.get("email")
             firstname = payload.get("firstname")
             lastname = payload.get("lastname")
@@ -68,8 +60,10 @@ def validateuser(func):
 
             if email is None:
                 raise HTTPException(status_code=401, detail="Token Invalid")
+
             if datetime.utcfromtimestamp(exp) < datetime.utcnow():
                 raise HTTPException(status_code=401, detail="Expired token")
+
             if not active:
                 raise HTTPException(status_code=401, detail="Inactive user")
 
@@ -84,18 +78,16 @@ def validateuser(func):
         return await func(*args, **kwargs)
     return wrapper
 
-
 def validateadmin(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        request = kwargs.get('request')
+        request: Request = kwargs.get('request')
         if not request:
             raise HTTPException(status_code=400, detail="Request object not found")
 
-        # ✅ Permitir preflight OPTIONS
+        # **Permitir preflight OPTIONS sin token**
         if request.method == "OPTIONS":
-            from fastapi.responses import Response
-            return Response(status_code=200)
+            return await func(*args, **kwargs)
 
         authorization: str = request.headers.get("Authorization")
         if not authorization:
@@ -107,7 +99,6 @@ def validateadmin(func):
 
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-
             email = payload.get("email")
             firstname = payload.get("firstname")
             lastname = payload.get("lastname")
@@ -118,8 +109,10 @@ def validateadmin(func):
 
             if email is None:
                 raise HTTPException(status_code=401, detail="Token Invalid")
+
             if datetime.utcfromtimestamp(exp) < datetime.utcnow():
                 raise HTTPException(status_code=401, detail="Expired token")
+
             if not active or not admin:
                 raise HTTPException(status_code=401, detail="Inactive user or not admin")
 
@@ -135,14 +128,11 @@ def validateadmin(func):
         return await func(*args, **kwargs)
     return wrapper
 
-
+# Funciones auxiliares para Depends()
 def validate_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    """Validar token JWT para usuarios autenticados - Para usar con Depends()"""
     token = credentials.credentials
-
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-
         email = payload.get("email")
         firstname = payload.get("firstname")
         lastname = payload.get("lastname")
@@ -166,18 +156,13 @@ def validate_token(credentials: HTTPAuthorizationCredentials = Depends(security)
             "active": active,
             "role": "admin" if admin else "user"
         }
-
     except PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token or expired token")
 
-
 def validate_admin(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    """Validar token JWT para administradores - Para usar con Depends()"""
     token = credentials.credentials
-
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-
         email = payload.get("email")
         firstname = payload.get("firstname")
         lastname = payload.get("lastname")
@@ -201,6 +186,5 @@ def validate_admin(credentials: HTTPAuthorizationCredentials = Depends(security)
             "active": active,
             "role": "admin"
         }
-
     except PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token or expired token")
